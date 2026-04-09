@@ -1,0 +1,214 @@
+┌──────────────────────────────┐
+│           Developer           │
+│     (VS Code + Terminal)      │
+└──────────────┬───────────────┘
+               │
+               │ git push
+               ▼
+┌──────────────────────────────────────────┐
+│                 GitHub                    │
+│                                          │
+│  ┌────────────────┐   ┌────────────────┐│
+│  │  Repo: Infra    │   │  Repo: App     ││
+│  │  (Terraform)    │   │  (Python API)  ││
+│  └───────┬─────────┘   └───────┬────────┘│
+│          │                     │         │
+│          ▼                     ▼         │
+│  GitHub Actions           GitHub Actions │
+│  (Infra Pipeline)         (App Pipeline) │
+└──────────┬─────────────────────┬─────────┘
+           │                     │
+           │ terraform apply     │ docker build
+           │                     │
+           ▼                     ▼
+┌──────────────────────────────────────────┐
+│                AWS Cloud                  │
+│                                          │
+│  ┌──────────────┐   ┌─────────────────┐ │
+│  │     ECR      │◄──│  Docker Image   │ │
+│  │ (Image Repo) │   └─────────────────┘ │
+│  └──────┬───────┘                         │
+│         │                                 │
+│         ▼                                 │
+│  ┌────────────────────────────────────┐ │
+│  │            Amazon EKS               │ │
+│  │                                    │ │
+│  │  ┌──────────────┐                 │ │
+│  │  │  Kubernetes  │                 │ │
+│  │  │  Deployment  │◄── Helm Chart   │ │
+│  │  └──────┬───────┘                 │ │
+│  │         │                         │ │
+│  │  ┌──────▼──────┐                  │ │
+│  │  │   Service   │                  │ │
+│  │  └──────┬──────┘                  │ │
+│  │         │                         │ │
+│  │  ┌──────▼──────┐                  │ │
+│  │  │   Ingress   │─── Public URL ───▶│ │
+│  │  └─────────────┘                  │ │
+│  │                                    │ │
+│  │  ConfigMap  → App Config           │ │
+│  │  Secret     → Sensitive Data       │ │
+│  └────────────────────────────────────┘ │
+└──────────────────────────────────────────┘
+
+SkyFire v1 
+
+A real-world Cloud / DevOps platform project designed to demonstrate how modern teams build, deploy, and operate applications on AWS using best practices.
+
+This project is intentionally simple in what it does, but serious in how it is built.
+
+SkyFire v1 focuses on platform design and deployment patterns rather than application complexity.
+
+⸻
+
+What is SkyFire v1?
+
+SkyFire v1 is a small Python API deployed to AWS EKS (Kubernetes) using:
+	•	Infrastructure as Code (Terraform)
+	•	Containerization (Docker)
+	•	Kubernetes packaging (Helm)
+	•	CI/CD pipelines (GitHub Actions)
+
+Think of SkyFire as:
+
+“A tiny application, built the same way a real company would build a big one.”
+
+⸻
+
+Why this project exists
+
+Most beginner projects only show code.
+
+SkyFire shows:
+	•	How infrastructure is created safely
+	•	How applications are built and deployed automatically
+	•	How changes flow from a developer’s laptop to production
+	•	How modern DevOps and Cloud tools work together, not in isolation
+
+This is the kind of project recruiters expect when they say:
+
+“Show me how you would deploy something in the real world.”
+
+⸻
+
+SkyFire explained like you’re a baby (but a smart one)
+
+Let’s break it down very simply.
+
+1️⃣ You (the developer)
+
+You write code on your laptop using:
+	•	VS Code
+	•	Terminal
+	•	Git
+
+When you’re ready, you run:
+
+git push
+
+That’s it. Everything else is automatic.
+
+⸻
+
+2️⃣ GitHub (the brain)
+
+GitHub stores the code and decides what happens next.
+
+SkyFire uses GitHub Actions to:
+	•	Build Docker images
+	•	Push images to AWS
+	•	Create or update cloud infrastructure
+	•	Deploy the app to Kubernetes
+
+No clicking buttons. No manual deployments.
+
+⸻
+
+3️⃣ AWS (the muscles)
+
+AWS runs everything:
+	•	ECR → stores Docker images
+	•	EKS → runs Kubernetes
+	•	VPC + networking → keeps things secure
+
+Kubernetes makes sure:
+	•	The app stays running
+	•	The app can scale
+	•	The app can be updated safely
+
+⸻
+
+4️⃣ The result
+
+You get:
+	•	A live API
+	•	A public endpoint
+	•	A production-style deployment
+
+All triggered by a simple git push.
+
+⸻
+
+High-level architecture
+	•	ASCII diagram: docs/diagram-ascii.txt
+	•	Visual diagram: docs/architecture/skyfire-v1-architecture.jpg
+
+These diagrams explain the full flow from laptop → GitHub → AWS → users.
+
+⸻
+
+Repository structure
+
+skyfire/
+├── app/                    # Python API source code
+├── infra/                  # Terraform (AWS infrastructure)
+├── helm/                   # Helm chart for Kubernetes
+├── docs/                   # Architecture, diagrams, decisions
+├── .github/workflows/      # CI/CD pipelines (GitHub Actions)
+├── README.md
+└── LICENSE
+
+This structure mirrors how real platform teams organize repositories.
+
+⸻
+
+Tools used (and why)
+	•	Python → simple API logic
+	•	Docker → package the app the same everywhere
+	•	Terraform → create infrastructure safely and repeatedly
+	•	AWS EKS → production-grade Kubernetes
+	•	Helm → manage Kubernetes deployments cleanly
+	•	GitHub Actions → automate everything
+
+Each tool has a clear job. No tool is used “just because”.
+
+⸻
+
+What SkyFire proves
+
+SkyFire v1 proves that I can:
+	•	Design a real cloud architecture
+	•	Use Infrastructure as Code properly
+	•	Build CI/CD pipelines
+	•	Deploy applications to Kubernetes
+	•	Think like a Cloud / DevOps engineer
+
+This is not a toy project.
+It is a foundation.
+
+⸻
+
+What comes next (future versions)
+
+Planned improvements:
+	•	Monitoring & observability (Prometheus / Grafana / CloudWatch)
+	•	Security hardening
+	•	Environment separation (dev / staging / prod)
+	•	More advanced API features
+
+SkyFire will evolve — just like real platforms do.
+
+⸻
+
+SkyFire is not about being fancy.
+It’s about being correct.
