@@ -5,11 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
-    
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: skyfire-api
   IMAGE_TAG: ${{ github.sha }}
+  EKS_CLUSTER_NAME: skyfire-eks
 
 jobs:
   build-and-push:
@@ -26,11 +27,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-          
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
+
       - name: Build Docker image
         run: |
           docker build \
@@ -43,3 +44,37 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure Kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.21.0
+
+      - name: Deploy SkyFire with Helm
+        run: |
+          helm upgrade --install skyfire ./helm/skyfire \
+            --namespace skyfire \
+            --create-namespace \
+            --set-string image.tag=${{ env.IMAGE_TAG }} \
+            --atomic \
+            --timeout 5m
