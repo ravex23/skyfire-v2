@@ -1,0 +1,85 @@
+name: Bootstrap EKS Cluster
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: skyfire-eks
+  LBC_IAM_ROLE_NAME: skyfire-aws-load-balancer-controller
+  LBC_CHART_VERSION: "1.14.0"
+  LBC_SERVICE_ACCOUNT_NAME: aws-load-balancer-controller
+
+jobs:
+  bootstrap:
+    name: Bootstrap Cluster Add-ons
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure Kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.21.0
+
+      - name: Build Controller IAM Role ARN
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+            --query Account \
+            --output text)
+
+          echo "LBC_IAM_ROLE_ARN=arn:aws:iam::${AWS_ACCOUNT_ID}:role/${LBC_IAM_ROLE_NAME}" \
+            >> "$GITHUB_ENV"
+
+      - name: Create Controller Service Account
+        run: |
+          kubectl create serviceaccount "$LBC_SERVICE_ACCOUNT_NAME" \
+            --namespace kube-system \
+            --dry-run=client \
+            --output yaml \
+            | kubectl apply -f -
+
+          kubectl annotate serviceaccount "$LBC_SERVICE_ACCOUNT_NAME" \
+            --namespace kube-system \
+            eks.amazonaws.com/role-arn="$LBC_IAM_ROLE_ARN" \
+            --overwrite
+
+      - name: Install AWS Load Balancer Controller
+        run: |
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update eks
+
+          helm upgrade --install aws-load-balancer-controller \
+            eks/aws-load-balancer-controller \
+            --namespace kube-system \
+            --version "$LBC_CHART_VERSION" \
+            --set clusterName="$EKS_CLUSTER_NAME" \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name="$LBC_SERVICE_ACCOUNT_NAME" \
+            --wait \
+            --timeout 5m
+
+      - name: Verify AWS Load Balancer Controller
+        run: |
+          kubectl rollout status \
+            deployment/aws-load-balancer-controller \
+            --namespace kube-system \
+            --timeout 5m
+
+          kubectl get deployment aws-load-balancer-controller \
+            --namespace kube-system
