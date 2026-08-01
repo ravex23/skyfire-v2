@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - main
+
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to EKS?
+        required: true
+        type: boolean
+        default: false
 
 env:
   AWS_REGION: us-east-1
@@ -45,6 +52,7 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
   deploy:
+    if: ${{ inputs.deploy == true }}
     needs: build-and-push
     runs-on: ubuntu-latest
 
