@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="SkyFire — a gamified learning dashboard for ambitious teams." />
+    <title>SkyFire — Learning Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css?v=2" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/" aria-label="SkyFire home">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <span>SkyFire</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="active" href="#dashboard"><span aria-hidden="true">⌂</span>Dashboard</a>
+          <a href="#learning"><span aria-hidden="true">▣</span>My learning</a>
+          <a href="#challenges"><span aria-hidden="true">◆</span>Challenges</a>
+          <a href="#leaderboard"><span aria-hidden="true">♛</span>Leaderboard</a>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="mini-profile">
+            <span class="avatar">FM</span>
+            <span><strong>Fabrice M.</strong><small>Cloud Pathfinder</small></span>
+          </div>
+          <a href="/docs"><span aria-hidden="true">?</span>API docs</a>
+        </div>
+      </aside>
+
+      <main id="dashboard">
+        <header class="topbar">
+          <a class="mobile-brand brand" href="/" aria-label="SkyFire home">
+            <span class="brand-mark" aria-hidden="true">S</span><span>SkyFire</span>
+          </a>
+          <div class="workspace-label">
+            <span aria-hidden="true">◎</span>
+            <span>Learner workspace</span>
+          </div>
+          <div class="top-actions">
+            <a class="status-pill" href="/health">Health endpoint <span aria-hidden="true">↗</span></a>
+            <span class="avatar small">FM</span>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="welcome" aria-labelledby="welcome-title">
+            <div>
+              <span class="eyebrow">YOUR LEARNING DASHBOARD</span>
+              <h1 id="welcome-title">Ready to level up, Fabrice?</h1>
+              <p>Your next cloud milestone is one focused lesson away.</p>
+            </div>
+            <div class="level-card" aria-label="Level 12, 2,460 of 3,000 XP">
+              <span class="level-badge">12</span>
+              <div>
+                <span><strong>Cloud Pathfinder</strong><b>2,460 / 3,000 XP</b></span>
+                <div class="progress"><i style="--progress: 82%"></i></div>
+                <small>540 XP to Level 13</small>
+              </div>
+            </div>
+          </section>
+
+          <div class="dashboard-grid">
+            <div class="primary-column">
+              <section id="learning" aria-labelledby="continue-title">
+                <div class="section-heading">
+                  <div><span class="eyebrow">CURRENT MISSION</span><h2 id="continue-title">Continue learning</h2></div>
+                  <span class="section-note">1 active course</span>
+                </div>
+
+                <article class="course-card">
+                  <div class="course-art" aria-hidden="true">
+                    <span class="orbit one"></span><span class="orbit two"></span>
+                    <strong>AWS</strong><small>ARCHITECT</small>
+                  </div>
+                  <div class="course-copy">
+                    <div><span class="tag">ARCHITECTURE</span><span class="lesson-count">8 of 12 lessons</span></div>
+                    <h3>AWS Solutions Architect</h3>
+                    <p>Design resilient architectures</p>
+                    <div class="progress large"><i style="--progress: 67%"></i></div>
+                    <div class="course-meta">
+                      <span><i>▶</i><span><small>UP NEXT</small><strong>Choosing the right database</strong></span></span>
+                      <span><small>EST. TIME</small><strong>18 min</strong></span>
+                    </div>
+                    <a class="button" href="#lesson">Resume lesson <span aria-hidden="true">→</span></a>
+                  </div>
+                </article>
+              </section>
+
+              <section id="challenges" aria-labelledby="challenge-title">
+                <div class="section-heading">
+                  <div><span class="eyebrow">PRACTICE ARENA</span><h2 id="challenge-title">Weekly challenges</h2></div>
+                  <span class="refresh">Resets in 2d 14h</span>
+                </div>
+                <div class="challenge-grid">
+                  <article class="challenge-card">
+                    <span class="challenge-icon amber" aria-hidden="true">⚡</span>
+                    <div><span class="tag">+250 XP</span><h3>Fault finder</h3><p>Diagnose a failing Kubernetes deployment.</p></div>
+                    <span class="difficulty">INTERMEDIATE</span>
+                  </article>
+                  <article class="challenge-card">
+                    <span class="challenge-icon violet" aria-hidden="true">⌘</span>
+                    <div><span class="tag">+180 XP</span><h3>Pipeline sprint</h3><p>Add a quality gate to a CI workflow.</p></div>
+                    <span class="difficulty">BEGINNER</span>
+                  </article>
+                </div>
+              </section>
+
+              <section class="lesson-preview" id="lesson" aria-labelledby="lesson-title">
+                <div class="lesson-number" aria-hidden="true">09</div>
+                <div>
+                  <span class="eyebrow">NEXT LESSON</span>
+                  <h2 id="lesson-title">Choosing the right database</h2>
+                  <p>Compare relational, key-value, document, and in-memory data stores against workload requirements.</p>
+                </div>
+                <span class="lesson-duration">18 min</span>
+              </section>
+            </div>
+
+            <aside class="right-column">
+              <section class="panel streak-panel" aria-labelledby="streak-title">
+                <div class="panel-title"><div><span class="eyebrow">MOMENTUM</span><h2 id="streak-title">Learning streak</h2></div><span class="fire" aria-hidden="true">🔥</span></div>
+                <div class="streak-score"><strong>7</strong><span>days<br />in a row</span></div>
+                <div class="week" aria-label="Seven day learning activity">
+                  <span><i>✓</i><small>M</small></span><span><i>✓</i><small>T</small></span><span><i>✓</i><small>W</small></span><span><i>✓</i><small>T</small></span><span><i>✓</i><small>F</small></span><span class="today"><i>✓</i><small>S</small></span><span class="future"><i></i><small>S</small></span>
+                </div>
+                <p>Complete one lesson tomorrow to keep your streak alive.</p>
+              </section>
+
+              <section class="panel" id="leaderboard" aria-labelledby="leaderboard-title">
+                <div class="panel-title"><div><span class="eyebrow">YOUR TEAM</span><h2 id="leaderboard-title">Leaderboard</h2></div><span class="section-note">Top 4 this week</span></div>
+                <ol class="leaders">
+                  <li><b>1</b><span class="avatar coral">AK</span><span><strong>Amara K.</strong><small>3,840 XP</small></span><em>▲</em></li>
+                  <li><b>2</b><span class="avatar blue">JL</span><span><strong>Jonas L.</strong><small>3,210 XP</small></span><em>—</em></li>
+                  <li class="current"><b>3</b><span class="avatar">FM</span><span><strong>You</strong><small>2,460 XP</small></span><em>▲</em></li>
+                  <li><b>4</b><span class="avatar green">SN</span><span><strong>Sofia N.</strong><small>2,280 XP</small></span><em>▼</em></li>
+                </ol>
+              </section>
+
+              <blockquote>
+                <span aria-hidden="true">“</span>
+                <p>The beautiful thing about learning is that nobody can take it away from you.</p>
+                <cite>— B.B. King</cite>
+              </blockquote>
+            </aside>
+          </div>
+        </div>
+      </main>
+
+      <nav class="mobile-nav" aria-label="Mobile navigation">
+        <a class="active" href="#dashboard"><span aria-hidden="true">⌂</span>Dashboard</a>
+        <a href="#learning"><span aria-hidden="true">▣</span>Learning</a>
+        <a href="#challenges"><span aria-hidden="true">◆</span>Challenges</a>
+        <a href="#leaderboard"><span aria-hidden="true">♛</span>Leaders</a>
+      </nav>
+    </div>
+  </body>
+</html>
