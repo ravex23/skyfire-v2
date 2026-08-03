@@ -21,12 +21,25 @@ env:
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Image
+    name: Test, Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r app/requirements-dev.txt
+
+      - name: Test application source
+        run: python -m pytest app/tests
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -45,6 +58,29 @@ jobs:
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
             ./app
+
+      - name: Test Docker container
+        run: |
+          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+
+          docker run \
+            --detach \
+            --name skyfire-smoke-test \
+            --publish 8000:8000 \
+            "$IMAGE"
+
+          trap 'docker logs skyfire-smoke-test || true; docker rm --force skyfire-smoke-test || true' EXIT
+
+          for attempt in {1..10}; do
+            if response=$(curl --fail --silent http://127.0.0.1:8000/health); then
+              break
+            fi
+
+            echo "Waiting for SkyFire container... attempt $attempt/10"
+            sleep 2
+          done
+
+          test "${response:-}" = '{"status":"ok"}'
 
       - name: Push Docker Images
         run: |
