@@ -24,6 +24,10 @@ jobs:
     name: Test, Build and Push Docker Image
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,9 +48,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: skyfire-ci-${{ github.run_id }}
 
       - name: Login to Amazon ECR
         id: login-ecr
