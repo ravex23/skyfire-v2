@@ -48,6 +48,37 @@ module "eks" {
   cluster_endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
 
+  access_entries = {
+    github_actions_cd = {
+      principal_arn = var.github_actions_cd_role_arn
+
+      policy_associations = {
+        skyfire_namespace = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+
+          access_scope = {
+            type       = "namespace"
+            namespaces = ["skyfire"]
+          }
+        }
+      }
+    }
+
+    github_actions_bootstrap = {
+      principal_arn = var.github_actions_bootstrap_role_arn
+
+      policy_associations = {
+        eks_addons_bootstrap = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+
   eks_managed_node_groups = {
     default = {
       name           = "${var.project_name}-ng"

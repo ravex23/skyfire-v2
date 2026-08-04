@@ -17,3 +17,13 @@ variable "vpc_cidr" {
   type    = string
   default = "10.0.0.0/16"
 }
+
+variable "github_actions_cd_role_arn" {
+  description = "ARN of the GitHub Actions CD role authorized to deploy SkyFire"
+  type        = string
+}
+
+variable "github_actions_bootstrap_role_arn" {
+  description = "ARN of the GitHub Actions role authorized to bootstrap EKS add-ons"
+  type        = string
+}

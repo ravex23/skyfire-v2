@@ -96,6 +96,10 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,9 +107,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_CD_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: skyfire-cd-${{ github.run_id }}
 
       - name: Configure Kubeconfig
         run: |
@@ -122,7 +126,6 @@ jobs:
         run: |
           helm upgrade --install skyfire ./helm/skyfire \
             --namespace skyfire \
-            --create-namespace \
             --set-string image.tag=${{ env.IMAGE_TAG }} \
             --atomic \
             --timeout 5m

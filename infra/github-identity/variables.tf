@@ -28,8 +28,26 @@ variable "ecr_repository_name" {
   default     = "skyfire-api"
 }
 
-variable "github_actions_role_name" {
+variable "github_actions_ci_role_name" {
   description = "Name of the IAM role assumed by GitHub Actions"
   type        = string
   default     = "skyfire-github-actions"
+}
+
+variable "github_actions_cd_role_name" {
+  description = "Name of the IAM role assumed by the SkyFire CD job"
+  type        = string
+  default     = "skyfire-github-actions-cd"
+}
+
+variable "eks_cluster_name" {
+  description = "EKS cluster the CD role may discover"
+  type        = string
+  default     = "skyfire-eks"
+}
+
+variable "github_actions_bootstrap_role_name" {
+  description = "Name of the IAM role assumed by the SkyFire bootstrap workflow"
+  type        = string
+  default     = "skyfire-github-actions-bootstrap"
 }
