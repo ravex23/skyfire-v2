@@ -3,7 +3,7 @@ terraform {
 
   backend "s3" {
     bucket       = "skyfire-terraform-state-182399705651"
-    key          = "skyfire/github-identity/terraform.tfstate"
+    key          = "skyfire/state-backend/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true

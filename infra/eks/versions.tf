@@ -1,5 +1,13 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = "~> 1.15.0"
+
+  backend "s3" {
+    bucket       = "skyfire-terraform-state-182399705651"
+    key          = "skyfire/eks/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 
   required_providers {
     aws = {
