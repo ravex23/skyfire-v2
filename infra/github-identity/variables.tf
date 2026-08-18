@@ -51,3 +51,15 @@ variable "github_actions_bootstrap_role_name" {
   type        = string
   default     = "skyfire-github-actions-bootstrap"
 }
+
+variable "github_actions_terraform_plan_role_name" {
+  description = "Name of the read-only IAM role used by Terraform plan"
+  type        = string
+  default     = "skyfire-github-actions-terraform-plan"
+}
+
+variable "terraform_state_bucket_name" {
+  description = "S3 bucket containing the SkyFire Terraform state files"
+  type        = string
+  default     = "skyfire-terraform-state-182399705651"
+}

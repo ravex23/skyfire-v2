@@ -72,3 +72,58 @@ jobs:
       - name: Validate configuration
         working-directory: ${{ matrix.directory }}
         run: terraform validate
+
+  plan:
+    name: Plan ${{ matrix.name }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - format
+      - validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: State Backend
+            directory: infra/state-backend
+
+          - name: GitHub Identity
+            directory: infra/github-identity
+
+          - name: EKS
+            directory: infra/eks
+
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_github_actions_cd_role_arn: ${{ vars.AWS_CD_ROLE_ARN }}
+      TF_VAR_github_actions_bootstrap_role_arn: ${{ vars.AWS_BOOTSTRAP_ROLE_ARN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.15.8"
+
+      - name: Configure read-only AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: skyfire-terraform-plan
+
+      - name: Initialize remote backend
+        working-directory: ${{ matrix.directory }}
+        run: terraform init -input=false
+
+      - name: Generate read-only plan
+        working-directory: ${{ matrix.directory }}
+        run: terraform plan -input=false -lock=false -no-color

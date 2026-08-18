@@ -57,6 +57,14 @@ data "aws_partition" "current" {}
 locals {
   ecr_repository_arn = "arn:${data.aws_partition.current.partition}:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.ecr_repository_name}"
   eks_cluster_arn    = "arn:${data.aws_partition.current.partition}:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.eks_cluster_name}"
+
+  terraform_state_bucket_arn = "arn:${data.aws_partition.current.partition}:s3:::${var.terraform_state_bucket_name}"
+
+  terraform_state_keys = [
+    "skyfire/state-backend/terraform.tfstate",
+    "skyfire/github-identity/terraform.tfstate",
+    "skyfire/eks/terraform.tfstate"
+  ]
 }
 
 data "aws_iam_policy_document" "github_actions_ecr" {
@@ -187,4 +195,84 @@ resource "aws_iam_policy" "github_actions_bootstrap_eks" {
 resource "aws_iam_role_policy_attachment" "github_actions_bootstrap_eks" {
   role       = aws_iam_role.github_actions_bootstrap.name
   policy_arn = aws_iam_policy.github_actions_bootstrap_eks.arn
+}
+
+resource "aws_iam_role" "github_actions_terraform_plan" {
+  name               = var.github_actions_terraform_plan_role_name
+  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+
+  tags = {
+    Project = "skyfire"
+    Purpose = "github-actions-terraform-plan"
+  }
+}
+
+data "aws_iam_policy_document" "github_actions_terraform_plan" {
+  statement {
+    sid    = "ReadTerraformStateBucket"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetBucket*",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      local.terraform_state_bucket_arn
+    ]
+  }
+
+  statement {
+    sid    = "ReadTerraformStateObjects"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      for key in local.terraform_state_keys :
+      "${local.terraform_state_bucket_arn}/${key}"
+    ]
+  }
+
+  statement {
+    sid    = "ReadAWSInfrastructure"
+    effect = "Allow"
+
+    actions = [
+      "autoscaling:Describe*",
+      "ec2:Describe*",
+      "ecr:Describe*",
+      "ecr:List*",
+      "eks:Describe*",
+      "eks:List*",
+      "elasticloadbalancing:Describe*",
+      "iam:Get*",
+      "iam:List*",
+      "kms:Describe*",
+      "kms:List*",
+      "logs:Describe*",
+      "logs:List*",
+      "sts:GetCallerIdentity"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "github_actions_terraform_plan" {
+  name        = "${var.github_actions_terraform_plan_role_name}-read"
+  description = "Allows Terraform plan to read SkyFire state and inspect AWS infrastructure"
+  policy      = data.aws_iam_policy_document.github_actions_terraform_plan.json
+
+  tags = {
+    Project = "skyfire"
+    Purpose = "github-actions-terraform-plan"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_terraform_plan" {
+  role       = aws_iam_role.github_actions_terraform_plan.name
+  policy_arn = aws_iam_policy.github_actions_terraform_plan.arn
 }
