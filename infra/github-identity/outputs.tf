@@ -27,3 +27,8 @@ output "github_actions_bootstrap_role_arn" {
   description = "ARN of the IAM role assumed by the SkyFire bootstrap workflow"
   value       = aws_iam_role.github_actions_bootstrap.arn
 }
+
+output "github_actions_terraform_plan_role_arn" {
+  description = "ARN of the read-only IAM role used by Terraform plan"
+  value       = aws_iam_role.github_actions_terraform_plan.arn
+}
