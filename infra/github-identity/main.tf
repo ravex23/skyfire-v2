@@ -213,6 +213,7 @@ data "aws_iam_policy_document" "github_actions_terraform_plan" {
     effect = "Allow"
 
     actions = [
+      "s3:GetAccelerateConfiguration",
       "s3:GetBucket*",
       "s3:ListBucket"
     ]
