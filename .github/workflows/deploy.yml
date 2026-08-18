@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "helm/**"
+      - "k8/**"
+      - ".github/workflows/deploy.yml"
 
   workflow_dispatch:
     inputs:
