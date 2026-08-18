@@ -46,7 +46,11 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   cluster_endpoint_public_access           = true
-  enable_cluster_creator_admin_permissions = true
+  enable_cluster_creator_admin_permissions = false
+
+  kms_key_administrators = [
+    var.terraform_apply_role_arn
+  ]
 
   access_entries = {
     github_actions_cd = {

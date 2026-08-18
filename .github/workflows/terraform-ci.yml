@@ -103,6 +103,7 @@ jobs:
       AWS_REGION: us-east-1
       TF_VAR_github_actions_cd_role_arn: ${{ vars.AWS_CD_ROLE_ARN }}
       TF_VAR_github_actions_bootstrap_role_arn: ${{ vars.AWS_BOOTSTRAP_ROLE_ARN }}
+      TF_VAR_terraform_apply_role_arn: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
 
     steps:
       - name: Checkout repository

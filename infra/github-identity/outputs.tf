@@ -32,3 +32,8 @@ output "github_actions_terraform_plan_role_arn" {
   description = "ARN of the read-only IAM role used by Terraform plan"
   value       = aws_iam_role.github_actions_terraform_plan.arn
 }
+
+output "github_actions_terraform_apply_role_arn" {
+  description = "ARN of the approval-gated IAM role used by Terraform apply"
+  value       = aws_iam_role.github_actions_terraform_apply.arn
+}

@@ -27,3 +27,8 @@ variable "github_actions_bootstrap_role_arn" {
   description = "ARN of the GitHub Actions role authorized to bootstrap EKS add-ons"
   type        = string
 }
+
+variable "terraform_apply_role_arn" {
+  description = "ARN of the GitHub Actions role authorized to administer the EKS KMS key"
+  type        = string
+}

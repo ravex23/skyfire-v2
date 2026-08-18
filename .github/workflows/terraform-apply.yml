@@ -1,0 +1,91 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type APPLY to authorize the EKS infrastructure apply
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-eks-apply
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Verify Apply Request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require main branch and confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Terraform apply may only run from main."
+            exit 1
+          fi
+
+          if [ "$CONFIRMATION" != "APPLY" ]; then
+            echo "Confirmation must be exactly APPLY."
+            exit 1
+          fi
+
+  apply:
+    name: Apply EKS Infrastructure
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: terraform-apply
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: us-east-1
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_github_actions_cd_role_arn: ${{ vars.AWS_CD_ROLE_ARN }}
+      TF_VAR_github_actions_bootstrap_role_arn: ${{ vars.AWS_BOOTSTRAP_ROLE_ARN }}
+      TF_VAR_terraform_apply_role_arn: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
+
+    defaults:
+      run:
+        working-directory: infra/eks
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.15.8"
+
+      - name: Configure Terraform Apply AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: skyfire-terraform-apply
+
+      - name: Initialize remote backend
+        run: terraform init -input=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+      - name: Generate reviewed apply plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Display apply plan
+        run: terraform show -no-color tfplan
+
+      - name: Apply saved plan
+        run: terraform apply -input=false -auto-approve tfplan
+        
