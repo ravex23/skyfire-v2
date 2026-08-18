@@ -63,3 +63,15 @@ variable "terraform_state_bucket_name" {
   type        = string
   default     = "skyfire-terraform-state-182399705651"
 }
+
+variable "github_actions_terraform_apply_role_name" {
+  description = "Name of the approval-gated IAM role used by Terraform apply"
+  type        = string
+  default     = "skyfire-github-actions-terraform-apply"
+}
+
+variable "github_actions_terraform_apply_environment" {
+  description = "GitHub environment authorized to assume the Terraform apply role"
+  type        = string
+  default     = "terraform-apply"
+}
