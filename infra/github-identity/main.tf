@@ -215,6 +215,9 @@ data "aws_iam_policy_document" "github_actions_terraform_plan" {
     actions = [
       "s3:GetAccelerateConfiguration",
       "s3:GetBucket*",
+      "s3:GetEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:GetReplicationConfiguration",
       "s3:ListBucket"
     ]
 
