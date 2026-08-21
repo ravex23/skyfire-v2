@@ -81,6 +81,20 @@ module "eks" {
         }
       }
     }
+
+    fabrice = {
+      principal_arn = "arn:aws:iam::182399705651:user/fabrice"
+
+      policy_associations = {
+        cluster_admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
   }
 
   eks_managed_node_groups = {
