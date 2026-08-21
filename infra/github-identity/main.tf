@@ -459,6 +459,31 @@ data "aws_iam_policy_document" "github_actions_terraform_apply" {
   }
 
   statement {
+    sid    = "LaunchEKSManagedNodes"
+    effect = "Allow"
+
+    actions = [
+      "ec2:RunInstances",
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "ArnLike"
+      variable = "ec2:LaunchTemplate"
+      values = [
+        "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+      ]
+    }
+
+    condition {
+      test     = "Bool"
+      variable = "ec2:IsLaunchTemplateResource"
+      values   = ["true"]
+    }
+  }
+
+  statement {
     sid    = "ManageEKSCluster"
     effect = "Allow"
 
