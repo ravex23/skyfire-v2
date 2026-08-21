@@ -303,6 +303,8 @@ data "aws_iam_policy_document" "github_actions_terraform_plan" {
       "iam:Get*",
       "iam:List*",
       "kms:Describe*",
+      "kms:GetKeyPolicy",
+      "kms:GetKeyRotationStatus",
       "kms:List*",
       "logs:Describe*",
       "logs:List*",
