@@ -475,12 +475,6 @@ data "aws_iam_policy_document" "github_actions_terraform_apply" {
         "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
       ]
     }
-
-    condition {
-      test     = "Bool"
-      variable = "ec2:IsLaunchTemplateResource"
-      values   = ["true"]
-    }
   }
 
   statement {
