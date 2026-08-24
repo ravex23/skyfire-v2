@@ -15,6 +15,20 @@ ingress:
   className: alb
   host: skyfire.fabdev.co
   path: /
+  certificateArn: arn:aws:acm:us-east-1:182399705651:certificate/a3c955e8-56f1-4cb1-a800-94f116af0ad4
+  healthCheck:
+    path: /health/ready
+    successCodes: "200"
+
+health:
+  livenessPath: /health/live
+  readinessPath: /health/ready
+
+rollout:
+  minReadySeconds: 5
+  progressDeadlineSeconds: 300
+  maxUnavailable: 0
+  maxSurge: 1
 
 resources:
   requests:
