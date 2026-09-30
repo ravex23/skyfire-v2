@@ -10,6 +10,15 @@ on:
       - "k8/**"
       - ".github/workflows/deploy.yml"
 
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "helm/**"
+      - "k8/**"
+      - ".github/workflows/deploy.yml"
+
   workflow_dispatch:
     inputs:
       deploy:
@@ -26,12 +35,11 @@ env:
   PUBLIC_HOST: skyfire.fabdev.co
 
 jobs:
-  build-and-push:
-    name: Test, Build and Push Docker Image
+  validate:
+    name: Test Application, Image and Helm Chart
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
       contents: read
 
     steps:
@@ -51,27 +59,27 @@ jobs:
       - name: Test application source
         run: python -m pytest app/tests
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
         with:
-          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: skyfire-ci-${{ github.run_id }}
+          version: v3.21.0
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Validate Helm chart
+        run: |
+          helm lint ./helm/skyfire
+          helm template skyfire ./helm/skyfire \
+            --namespace skyfire \
+            >/dev/null
 
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
+            --tag "${ECR_REPOSITORY}:${IMAGE_TAG}" \
             ./app
 
       - name: Test Docker container
         run: |
-          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          IMAGE="${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           docker run \
             --detach \
@@ -92,10 +100,42 @@ jobs:
 
           test "${response:-}" = '{"status":"ok"}'
 
-      - name: Push Docker Images
+  build-and-push:
+    name: Publish Docker Image to ECR
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: validate
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: skyfire-ci-${{ github.run_id }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          docker build \
+            --tag "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}" \
+            --tag "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest" \
+            ./app
+
+      - name: Push Docker images
+        run: |
+          docker push "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest"
 
   deploy:
     if: ${{ inputs.deploy == true }}
