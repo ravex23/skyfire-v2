@@ -6,6 +6,13 @@ metadata:
     {{- include "skyfire.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  minReadySeconds: {{ .Values.rollout.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.rollout.maxUnavailable }}
+      maxSurge: {{ .Values.rollout.maxSurge }}
   selector:
     matchLabels:
       {{- include "skyfire.selectorLabels" . | nindent 6 }}
@@ -33,14 +40,18 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.health.readinessPath }}
               port: {{ .Values.service.targetPort }}
             initialDelaySeconds: 3
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
 
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.health.livenessPath }}
               port: {{ .Values.service.targetPort }}
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3

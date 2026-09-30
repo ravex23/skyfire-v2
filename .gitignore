@@ -214,6 +214,10 @@ __marimo__/
 crash.log
 crash.*.log
 
+# Terraform saved plans
+**/tfplan
+**/tfdestroy
+
 # Terraform variable files (keep only examples)
 *.tfvars
 !terraform.tfvars.example

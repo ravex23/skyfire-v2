@@ -10,6 +10,15 @@ on:
       - "k8/**"
       - ".github/workflows/deploy.yml"
 
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "helm/**"
+      - "k8/**"
+      - ".github/workflows/deploy.yml"
+
   workflow_dispatch:
     inputs:
       deploy:
@@ -23,14 +32,14 @@ env:
   ECR_REPOSITORY: skyfire-api
   IMAGE_TAG: ${{ github.sha }}
   EKS_CLUSTER_NAME: skyfire-eks
+  PUBLIC_HOST: skyfire.fabdev.co
 
 jobs:
-  build-and-push:
-    name: Test, Build and Push Docker Image
+  validate:
+    name: Test Application, Image and Helm Chart
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
       contents: read
 
     steps:
@@ -50,7 +59,62 @@ jobs:
       - name: Test application source
         run: python -m pytest app/tests
 
-      - name: Configure AWS Credentials
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.21.0
+
+      - name: Validate Helm chart
+        run: |
+          helm lint ./helm/skyfire
+          helm template skyfire ./helm/skyfire \
+            --namespace skyfire \
+            >/dev/null
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "${ECR_REPOSITORY}:${IMAGE_TAG}" \
+            ./app
+
+      - name: Test Docker container
+        run: |
+          IMAGE="${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          docker run \
+            --detach \
+            --name skyfire-smoke-test \
+            --publish 8000:8000 \
+            "$IMAGE"
+
+          trap 'docker logs skyfire-smoke-test || true; docker rm --force skyfire-smoke-test || true' EXIT
+
+          for attempt in {1..10}; do
+            if response=$(curl --fail --silent http://127.0.0.1:8000/health/ready); then
+              break
+            fi
+
+            echo "Waiting for SkyFire container... attempt $attempt/10"
+            sleep 2
+          done
+
+          test "${response:-}" = '{"status":"ok"}'
+
+  build-and-push:
+    name: Publish Docker Image to ECR
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: validate
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
@@ -64,37 +128,14 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
+            --tag "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}" \
+            --tag "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest" \
             ./app
 
-      - name: Test Docker container
+      - name: Push Docker images
         run: |
-          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
-
-          docker run \
-            --detach \
-            --name skyfire-smoke-test \
-            --publish 8000:8000 \
-            "$IMAGE"
-
-          trap 'docker logs skyfire-smoke-test || true; docker rm --force skyfire-smoke-test || true' EXIT
-
-          for attempt in {1..10}; do
-            if response=$(curl --fail --silent http://127.0.0.1:8000/health); then
-              break
-            fi
-
-            echo "Waiting for SkyFire container... attempt $attempt/10"
-            sleep 2
-          done
-
-          test "${response:-}" = '{"status":"ok"}'
-
-      - name: Push Docker Images
-        run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          docker push "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest"
 
   deploy:
     if: ${{ inputs.deploy == true }}
@@ -131,6 +172,123 @@ jobs:
         run: |
           helm upgrade --install skyfire ./helm/skyfire \
             --namespace skyfire \
+            --create-namespace \
             --set-string image.tag=${{ env.IMAGE_TAG }} \
             --atomic \
+            --cleanup-on-fail \
+            --wait \
+            --timeout 10m \
+            --history-max 10
+
+      - name: Verify Kubernetes rollout
+        run: |
+          kubectl rollout status deployment/skyfire \
+            --namespace skyfire \
             --timeout 5m
+
+          kubectl wait \
+            --namespace skyfire \
+            --for=condition=Ready pod \
+            --selector=app.kubernetes.io/name=skyfire,app.kubernetes.io/instance=skyfire \
+            --timeout=5m
+
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          EXPECTED_IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          ACTUAL_IMAGE=$(kubectl get deployment skyfire \
+            --namespace skyfire \
+            --output jsonpath='{.spec.template.spec.containers[0].image}')
+
+          echo "Expected image: $EXPECTED_IMAGE"
+          echo "Running image:  $ACTUAL_IMAGE"
+          test "$ACTUAL_IMAGE" = "$EXPECTED_IMAGE"
+
+          kubectl get deployment,pods,service,ingress --namespace skyfire --output wide
+
+      - name: Wait for public load balancer
+        run: |
+          for attempt in {1..60}; do
+            ALB_DNS=$(kubectl get ingress skyfire \
+              --namespace skyfire \
+              --output jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+
+            if [ -n "$ALB_DNS" ]; then
+              echo "ALB is available at $ALB_DNS"
+              echo "ALB_DNS=$ALB_DNS" >> "$GITHUB_ENV"
+              exit 0
+            fi
+
+            echo "Waiting for the AWS Load Balancer Controller... attempt $attempt/60"
+            sleep 10
+          done
+
+          echo "The ingress did not receive an ALB hostname within 10 minutes." >&2
+          exit 1
+
+      - name: Smoke test ALB over HTTPS
+        run: |
+          for attempt in {1..30}; do
+            ALB_IP=$(getent ahostsv4 "$ALB_DNS" | awk 'NR == 1 { print $1 }' || true)
+
+            if [ -n "$ALB_IP" ]; then
+              response=$(curl \
+                --fail \
+                --silent \
+                --show-error \
+                --resolve "${PUBLIC_HOST}:443:${ALB_IP}" \
+                "https://${PUBLIC_HOST}/health/ready" || true)
+
+              if [ "$response" = '{"status":"ok"}' ]; then
+                echo "ALB, TLS certificate, routing and readiness checks are healthy."
+                exit 0
+              fi
+            fi
+
+            echo "Waiting for healthy ALB targets... attempt $attempt/30"
+            sleep 10
+          done
+
+          echo "The application did not become healthy behind the ALB." >&2
+          exit 1
+
+      - name: Check public DNS and endpoint
+        run: |
+          if getent ahostsv4 "$PUBLIC_HOST" >/dev/null 2>&1; then
+            response=$(curl \
+              --fail \
+              --silent \
+              --show-error \
+              --retry 6 \
+              --retry-delay 10 \
+              "https://${PUBLIC_HOST}/health/ready")
+            test "$response" = '{"status":"ok"}'
+            echo "Public endpoint verified: https://${PUBLIC_HOST}"
+            echo "PUBLIC_DNS_STATUS=verified" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Public DNS is not configured yet. Create a GoDaddy CNAME named skyfire pointing to ${ALB_DNS}."
+            echo "PUBLIC_DNS_STATUS=needs GoDaddy CNAME" >> "$GITHUB_ENV"
+          fi
+
+      - name: Write deployment summary
+        run: |
+          {
+            echo "### SkyFire deployment"
+            echo ""
+            echo "- Image tag: \`${IMAGE_TAG}\`"
+            echo "- Kubernetes rollout: verified"
+            echo "- ALB health and HTTPS routing: verified"
+            echo "- ALB hostname: \`${ALB_DNS}\`"
+            echo "- Public URL: https://${PUBLIC_HOST}"
+            echo "- Public DNS: ${PUBLIC_DNS_STATUS}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Collect failure diagnostics
+        if: ${{ failure() }}
+        run: |
+          kubectl get deployment,pods,service,ingress \
+            --namespace skyfire \
+            --output wide || true
+          kubectl describe deployment skyfire --namespace skyfire || true
+          kubectl get events \
+            --namespace skyfire \
+            --sort-by='.lastTimestamp' || true
+          helm history skyfire --namespace skyfire || true
